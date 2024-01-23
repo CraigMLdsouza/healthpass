@@ -1,0 +1,27 @@
+/* src/components/MedicalRecords.css */
+.medical-record-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 10px;
+    width: 300px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: all 3s ease-in-out;
+  }
+  
+  .medical-record-card:hover {
+    transform: scale(1.05);
+  }
+  
+  .expanded {
+    height: auto !important;
+  }
+  
+  .expanded-content {
+    display: block;
+    margin-top: 10px;
+    font-size: 0.8em;
+    color: #555;
+  }
+  
