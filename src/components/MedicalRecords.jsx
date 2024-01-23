@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { onAuthStateChanged, getAuth } from 'firebase/auth';
+import { getStorage, ref, getDownloadURL } from 'firebase/storage';
 import firestore from '../firebase';
 import { Link } from 'react-router-dom';
 
@@ -52,6 +53,29 @@ const MedicalRecords = () => {
     setExpandedCardId((prevId) => (prevId === cardId ? null : cardId));
   };
 
+  const handleDownloadDocuments = async (documents, userId, recordId) => {
+    try {
+      const downloadPromises = documents.map(async (doc, index) => {
+        const storage = getStorage();
+        const documentRef = ref(storage, `userDocuments/${userId}/${recordId}/${doc.name}`);
+        const downloadURL = await getDownloadURL(documentRef);
+  
+        // Create a temporary link element and trigger the download
+        const link = document.createElement('a');
+        link.href = downloadURL;
+        link.download = `Document_${index + 1}_${doc.name}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      });
+  
+      await Promise.all(downloadPromises);
+    } catch (error) {
+      console.error('Error downloading documents:', error);
+    }
+  };
+  
+
   return (
     <div className="medical-records-container">
       <h1>Medical Records</h1>
@@ -71,12 +95,21 @@ const MedicalRecords = () => {
                 <p>Date and Time: {record.dateAndTime}</p>
                 <p>Location: {record.location}</p>
                 <p>Doctor Info: {record.doctorInfo}</p>
-                {record.document && record.document.url && (
-                  <p>
-                    Document: <a href={record.document.url} target="_blank" rel="noopener noreferrer">View Document</a>
-                  </p>
+                {record.documents && record.documents.length > 0 && (
+                  <div>
+                    <p>Documents:</p>
+                    <ul>
+                      {record.documents.map((document, index) => (
+                        <li key={index}>
+                          <a className = "download-buttons" href={document.url} target="_blank" rel="noopener noreferrer" download>{`Download Document ${index + 1}`}</a>
+                        </li>
+                      ))}
+                    </ul>
+                    <button onClick={() => handleDownloadDocuments(record.documents, userId, record.id)}>
+                      Download All Documents
+                    </button>
+                  </div>
                 )}
-                {/* Add more fields as needed */}
               </div>
             )}
           </div>

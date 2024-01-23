@@ -11,7 +11,7 @@ const DataEntry = () => {
     category: '',
     problem: '',
     treatment: '',
-    document: null,
+    documents: [],  // Change to an array to store multiple files
     dateAndTime: '',
     location: '',
     doctorInfo: '',
@@ -42,12 +42,15 @@ const DataEntry = () => {
         ...formData,
       });
 
-      // Upload the document to Firebase Storage
-      if (formData.document) {
+      // Upload the documents to Firebase Storage
+      if (formData.documents.length > 0) {
         const storage = getStorage();
         const userFolderRef = ref(storage, `userDocuments/${userId}`);
-        const documentRef = ref(userFolderRef, `${newDocRef.id}/${formData.document.name}`);
-        await uploadString(documentRef, formData.document.content, 'data_url');
+
+        await Promise.all(formData.documents.map(async (file, index) => {
+          const documentRef = ref(userFolderRef, `${newDocRef.id}/${file.name}`);
+          await uploadString(documentRef, file.content, 'data_url');
+        }));
       }
 
       // Clear the form after submission
@@ -56,7 +59,7 @@ const DataEntry = () => {
         category: '',
         problem: '',
         treatment: '',
-        document: null,
+        documents: [],
         dateAndTime: '',
         location: '',
         doctorInfo: '',
@@ -69,22 +72,28 @@ const DataEntry = () => {
   };
 
   const handleDocumentUpload = (e) => {
-    const file = e.target.files[0];
+    const files = e.target.files;
 
-    if (file) {
-      const reader = new FileReader();
+    if (files && files.length > 0) {
+      const readerPromises = Array.from(files).map((file) => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            resolve({
+              name: file.name,
+              content: reader.result,
+            });
+          };
+          reader.readAsDataURL(file);
+        });
+      });
 
-      reader.onloadend = () => {
+      Promise.all(readerPromises).then((documents) => {
         setFormData((prevFormData) => ({
           ...prevFormData,
-          document: {
-            name: file.name,
-            content: reader.result,
-          },
+          documents,
         }));
-      };
-
-      reader.readAsDataURL(file);
+      });
     }
   };
 
@@ -114,7 +123,7 @@ const DataEntry = () => {
         <br />
         <label>
           Document Upload:
-          <input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={handleDocumentUpload} />
+          <input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={handleDocumentUpload} multiple />
         </label>
         <br />
         <label>
