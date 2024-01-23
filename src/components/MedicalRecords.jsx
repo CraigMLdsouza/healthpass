@@ -61,10 +61,21 @@ const MedicalRecords = () => {
       {records.map((record) => (
         <div key={record.id} className={`medical-record-card ${expandedCardId === record.id ? 'expanded' : ''}`} onClick={() => handleCardToggle(record.id)}>
           <div className="record-info">
-            <h3 className="record-name">{record.name}</h3>
+            <h3 className="record-name">{record.title}</h3>
             {expandedCardId === record.id && (
               <div className="expanded-content">
                 <p>Date of Birth: {record.dob}</p>
+                <p>Category: {record.category}</p>
+                <p>Problem: {record.problem}</p>
+                <p>Treatment: {record.treatment}</p>
+                <p>Date and Time: {record.dateAndTime}</p>
+                <p>Location: {record.location}</p>
+                <p>Doctor Info: {record.doctorInfo}</p>
+                {record.document && record.document.url && (
+                  <p>
+                    Document: <a href={record.document.url} target="_blank" rel="noopener noreferrer">View Document</a>
+                  </p>
+                )}
                 {/* Add more fields as needed */}
               </div>
             )}

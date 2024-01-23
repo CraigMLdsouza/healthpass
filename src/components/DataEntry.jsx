@@ -1,30 +1,26 @@
 // src/components/DataEntry.jsx
 import React, { useState, useEffect } from 'react';
 import { addDoc, collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { onAuthStateChanged, getAuth } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
+import { getStorage, ref, uploadString } from 'firebase/storage';
 import firestore from '../firebase';
 
 const DataEntry = () => {
   const [formData, setFormData] = useState({
-    name: '',
-    dob: '',
-    // Add more fields as needed
+    title: '',
+    category: '',
+    problem: '',
+    treatment: '',
+    document: null,
+    dateAndTime: '',
+    location: '',
+    doctorInfo: '',
   });
   const [userId, setUserId] = useState(null);
 
   useEffect(() => {
     const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        // User is signed in
-        setUserId(user.uid);
-      } else {
-        // User is signed out
-        setUserId(null);
-      }
-    });
-
-    return () => unsubscribe();
+    setUserId(auth.currentUser?.uid || null);
   }, []);
 
   const handleDataEntry = async () => {
@@ -39,16 +35,31 @@ const DataEntry = () => {
       const userDocRef = doc(usersCollection, userId);
       // Create a subcollection 'dataEntries' within the 'users' document
       const dataEntriesCollection = collection(userDocRef, 'dataEntries');
-      await addDoc(dataEntriesCollection, {
+
+      // Add a new document to the 'dataEntries' subcollection
+      const newDocRef = await addDoc(dataEntriesCollection, {
         timestamp: serverTimestamp(),
         ...formData,
       });
 
+      // Upload the document to Firebase Storage
+      if (formData.document) {
+        const storage = getStorage();
+        const userFolderRef = ref(storage, `userDocuments/${userId}`);
+        const documentRef = ref(userFolderRef, `${newDocRef.id}/${formData.document.name}`);
+        await uploadString(documentRef, formData.document.content, 'data_url');
+      }
+
       // Clear the form after submission
       setFormData({
-        name: '',
-        dob: '',
-        // Reset other fields as needed
+        title: '',
+        category: '',
+        problem: '',
+        treatment: '',
+        document: null,
+        dateAndTime: '',
+        location: '',
+        doctorInfo: '',
       });
 
       console.log('Data entry added successfully!');
@@ -57,25 +68,23 @@ const DataEntry = () => {
     }
   };
 
-  const handleAddNewRecord = async () => {
-    if (!userId) {
-      console.error('User ID not available');
-      return;
-    }
+  const handleDocumentUpload = (e) => {
+    const file = e.target.files[0];
 
-    try {
-      // Create a new subcollection 'dataEntries' within the 'users' document
-      const usersCollection = collection(firestore, 'users');
-      const userDocRef = doc(usersCollection, userId);
-      const dataEntriesCollection = collection(userDocRef, 'dataEntries');
-      await addDoc(dataEntriesCollection, {
-        timestamp: serverTimestamp(),
-        // You can initialize other fields for a new record here
-      });
+    if (file) {
+      const reader = new FileReader();
 
-      console.log('New record added successfully!');
-    } catch (error) {
-      console.error('Error adding new record:', error);
+      reader.onloadend = () => {
+        setFormData((prevFormData) => ({
+          ...prevFormData,
+          document: {
+            name: file.name,
+            content: reader.result,
+          },
+        }));
+      };
+
+      reader.readAsDataURL(file);
     }
   };
 
@@ -84,16 +93,44 @@ const DataEntry = () => {
       <h1>Data Entry</h1>
       <form onSubmit={(e) => { e.preventDefault(); handleDataEntry(); }}>
         <label>
-          Name:
-          <input type="text" name="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+          Title:
+          <input type="text" name="title" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} />
         </label>
         <br />
         <label>
-          Date of Birth:
-          <input type="text" name="dob" value={formData.dob} onChange={(e) => setFormData({ ...formData, dob: e.target.value })} />
+          Category:
+          <input type="text" name="category" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} />
         </label>
         <br />
-        {/* Add more form fields here as needed */}
+        <label>
+          Problem:
+          <textarea name="problem" value={formData.problem} onChange={(e) => setFormData({ ...formData, problem: e.target.value })} />
+        </label>
+        <br />
+        <label>
+          Treatment:
+          <textarea name="treatment" value={formData.treatment} onChange={(e) => setFormData({ ...formData, treatment: e.target.value })} />
+        </label>
+        <br />
+        <label>
+          Document Upload:
+          <input type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={handleDocumentUpload} />
+        </label>
+        <br />
+        <label>
+          Date and Time:
+          <input type="text" name="dateAndTime" value={formData.dateAndTime} onChange={(e) => setFormData({ ...formData, dateAndTime: e.target.value })} />
+        </label>
+        <br />
+        <label>
+          Location:
+          <input type="text" name="location" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} />
+        </label>
+        <br />
+        <label>
+          Doctor Info:
+          <input type="text" name="doctorInfo" value={formData.doctorInfo} onChange={(e) => setFormData({ ...formData, doctorInfo: e.target.value })} />
+        </label>
         <br />
         <button type="submit">Submit</button>
       </form>
